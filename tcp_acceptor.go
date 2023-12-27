@@ -74,7 +74,7 @@ func (a *TcpAcceptor) Start() {
 	}
 	a.tag.SetRunning(true)
 	for i := 0; i < int(a.acceptNum); i++ {
-		a.safeGo("start accept go", a.accept)
+		a.safeGo("accept", a.accept)
 	}
 	a.goWg.Wait()
 	a.tag.SetRunning(false)
@@ -114,6 +114,7 @@ func (a *TcpAcceptor) runSession(conn net.Conn) {
 	a.sessions.Store(sid, session)
 	session.run()
 	atomic.AddInt32(&a.connSize, -1)
+	a.sessions.Delete(sid)
 }
 
 func (a *TcpAcceptor) safeGo(name string, fn func()) {

@@ -57,17 +57,15 @@ func (s *TcpSession) Post(fn func()) bool {
 	return true
 }
 
+// 主loop阻塞问题
+// 同步处理问题
+// tcp 写肯定需要保证不丢失
+// todo
 func (s *TcpSession) Send(msg any) bool {
-	if 0 == cap(s.sendChan) {
-		s.sendChan <- msg
-		return true
-	}
-	select {
-	case s.sendChan <- msg:
-		return true
-	default:
-	}
-	return false
+	// 如果选择同步写，就阻塞
+	// 如果异步，是否阻塞外部写？限流？
+	s.sendChan <- msg
+	return true
 }
 
 func (s *TcpSession) Close() {
@@ -83,13 +81,14 @@ func (s *TcpSession) run() {
 		return
 	}
 	s.tag.SetRunning(true)
+
 	s.safeGo("session pipe", s.pipe.Run)
 	s.safeGo("session wirte", s.write)
+
 	s.pipe.Post(&TcpEventAdd{
 		S: s,
 	})
-	// fmt.Printf("[%v] event add \n", s.conn.RemoteAddr().String())
-	s.safeGo("session read", s.read)
+	s.read()
 	s.goWg.Wait()
 	s.tag.SetRunning(false)
 }
@@ -115,7 +114,6 @@ func (s *TcpSession) read() {
 			})
 			break
 		}
-		// fmt.Printf("%v receive packet\n", s.conn.RemoteAddr().String())
 		s.pipe.Post(&TcpEventPacket{
 			S:      s,
 			Packet: packet,
@@ -130,7 +128,6 @@ func (s *TcpSession) write() {
 		if nil == msg {
 			break
 		}
-		// fmt.Printf("%v TcpSession write\n", s.conn.RemoteAddr().String())
 		s.codec.Write(s.conn, msg)
 	}
 	if nil != s.conn {
