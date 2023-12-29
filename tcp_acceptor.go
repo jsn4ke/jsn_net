@@ -8,10 +8,10 @@ import (
 )
 
 func NewTcpAcceptor(listener *net.TCPListener, acceptNum int32, limitConnSize int32,
-	providePipe func() Pipe, codec TcpCodec, readTimeout time.Duration, sendChanSize int) *TcpAcceptor {
+	providePipe PipeProvider, codec TcpCodec, readTimeout time.Duration, sendChanSize int) *TcpAcceptor {
 	// acceptor need
 	a := new(TcpAcceptor)
-	a.acceptNum = clip(acceptNum, 1, acceptRunningLimit)
+	a.acceptNum = Clip(acceptNum, 1, acceptRunningLimit)
 	a.listener = listener
 	a.limitConnSize = limitConnSize
 
@@ -35,10 +35,7 @@ type TcpAcceptor struct {
 	listener      net.Listener
 	limitConnSize int32
 
-	providePipe  func() Pipe
-	codec        TcpCodec
-	readTimeout  time.Duration
-	sendChanSize int
+	sessionConstructor
 
 	sid      uint64
 	sessions sync.Map
@@ -76,9 +73,12 @@ func (a *TcpAcceptor) Start() {
 	for i := 0; i < int(a.acceptNum); i++ {
 		a.safeGo("accept", a.accept)
 	}
-	a.goWg.Wait()
-	a.tag.SetRunning(false)
-	a.tag.EndStopping()
+	go func() {
+		a.goWg.Wait()
+		a.tag.SetRunning(false)
+		a.tag.EndStopping()
+	}()
+
 }
 
 func (a *TcpAcceptor) accept() {

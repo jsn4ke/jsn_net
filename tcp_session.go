@@ -13,12 +13,21 @@ type Pipe interface {
 	Close()
 }
 
+type PipeProvider func() Pipe
+
 type (
 	TcpCodec interface {
 		Read(io.Reader) (any, error)
 		Write(io.Writer, any)
 	}
 )
+
+type sessionConstructor struct {
+	providePipe  PipeProvider
+	codec        TcpCodec
+	readTimeout  time.Duration
+	sendChanSize int
+}
 
 func NewTcpSession(sid uint64, conn *net.TCPConn, pipe Pipe, codec TcpCodec, readTimeout time.Duration, sendChanSize int) *TcpSession {
 	s := new(TcpSession)
