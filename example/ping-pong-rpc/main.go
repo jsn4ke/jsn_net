@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"sync/atomic"
 	"time"
 
@@ -28,6 +29,7 @@ const (
 	mc_failure
 	mc_timeout
 	mc_cancle
+	mc_no_session
 	mc_max
 )
 
@@ -115,11 +117,17 @@ func runServer() {
 
 func runClient() {
 	cli := jsn_rpc.NewClient(*addr, 128, 2)
+	var lastLost int64
 	for {
 		count(mc_ping)
+		cancel := make(chan struct{})
+		go func() {
+			time.Sleep(time.Duration(time.Now().UnixNano()%10+100) * time.Millisecond)
+			close(cancel)
+		}()
 		err := cli.Call(&ping{
 			Data: "ping",
-		}, new(pong), nil, 0)
+		}, new(pong), cancel, time.Millisecond*200)
 		if nil != err {
 			count(mc_failure)
 			switch err {
@@ -127,6 +135,20 @@ func runClient() {
 				count(mc_cancle)
 			case jsn_rpc.TimeoutError:
 				count(mc_timeout)
+			case jsn_rpc.NoSesssionError:
+				count(mc_no_session)
+
+			}
+			switch err {
+			case jsn_rpc.NoSesssionError:
+				if 0 == lastLost {
+					lastLost = time.Now().Unix()
+				}
+				if 0 != lastLost && time.Now().Unix()-lastLost > int64(time.Second)*2 {
+					return
+				}
+			default:
+				lastLost = 0
 			}
 		} else {
 			count(mc_success)
@@ -172,13 +194,15 @@ func metrics() {
 		select {
 		case <-tk.C:
 			ns := createSnapshot()
-			fmt.Printf("%v qps:%v,success:%v,failure:%v,timeout:%v,manual:%v\n",
+			fmt.Printf("%v qps:%v,success:%v,failure:%v,timeout:%v,manual:%v,no_session:%v || pool:[%v]\n",
 				*mode,
 				ns[mc_pong]-ss[mc_pong],
 				ns[mc_success]-ss[mc_success],
 				ns[mc_failure]-ss[mc_failure],
 				ns[mc_timeout]-ss[mc_timeout],
 				ns[mc_cancle]-ss[mc_cancle],
+				ns[mc_no_session]-ss[mc_no_session],
+				append([]int64{}, jsn_rpc.RequestPool.Debug(), jsn_rpc.ResponsePool.Debug(), jsn_rpc.CallPool.Debug()),
 			)
 			ss = ns
 		}

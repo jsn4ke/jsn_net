@@ -3,22 +3,22 @@ package jsn_rpc
 import "github.com/jsn4ke/jsn_net"
 
 var (
-	requestPool  *jsn_net.SyncPool[Request]
-	responsePool *jsn_net.SyncPool[Response]
-	callPool     *jsn_net.SyncPool[Call]
+	RequestPool  *jsn_net.SyncPool[Request]
+	ResponsePool *jsn_net.SyncPool[Response]
+	CallPool     *jsn_net.SyncPool[Call]
 )
 
 func init() {
-	requestPool = new(jsn_net.SyncPool[Request])
-	if err := requestPool.Init(); nil != err {
+	RequestPool = new(jsn_net.SyncPool[Request])
+	if err := RequestPool.Init(); nil != err {
 		panic(err)
 	}
-	responsePool = new(jsn_net.SyncPool[Response])
-	if err := responsePool.Init(); nil != err {
+	ResponsePool = new(jsn_net.SyncPool[Response])
+	if err := ResponsePool.Init(); nil != err {
 		panic(err)
 	}
-	callPool = new(jsn_net.SyncPool[Call])
-	if err := callPool.Init(); nil != err {
+	CallPool = new(jsn_net.SyncPool[Call])
+	if err := CallPool.Init(); nil != err {
 		panic(err)
 	}
 }

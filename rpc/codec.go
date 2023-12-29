@@ -78,7 +78,7 @@ func (*codec) readRequest(r io.Reader) (any, error) {
 		return nil, err
 	}
 	var next int
-	req := requestPool.Get()
+	req := RequestPool.Get()
 	req.Seq = binary.BigEndian.Uint64(body[next:])
 	next += seqOccupied
 	if 0 != body[next] {
@@ -116,7 +116,7 @@ func (*codec) readResponse(r io.Reader) (any, error) {
 		return nil, err
 	}
 	var next int
-	resp := responsePool.Get()
+	resp := ResponsePool.Get()
 	resp.Seq = binary.BigEndian.Uint64(body[next:])
 	next += seqOccupied
 	mask := body[next]
@@ -131,7 +131,7 @@ func (*codec) readResponse(r io.Reader) (any, error) {
 }
 
 func (*codec) writeRequest(w io.Writer, r *Request) {
-	defer requestPool.Put(r)
+	defer RequestPool.Put(r)
 	err := func() error {
 		const (
 			readMaskOccupied = 1
@@ -167,7 +167,7 @@ func (*codec) writeRequest(w io.Writer, r *Request) {
 }
 
 func (*codec) writeResponse(w io.Writer, r *Response) {
-	defer responsePool.Put(r)
+	defer ResponsePool.Put(r)
 	const (
 		readMaskOccupied = 1
 		lengthOccupied   = 4

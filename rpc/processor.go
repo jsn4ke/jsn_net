@@ -157,23 +157,21 @@ func (c *Client) Call(in RpcUnit, reply RpcUnit, cancel <-chan struct{}, timeout
 	}
 	var (
 		timer = time.NewTimer(timeout)
-		mask  bool
 	)
 	defer func() {
 		timer.Stop()
-		if !mask {
-			c.removeCall(call.Seq)
+		ok := c.removeCall(call.Seq)
+		if !ok {
+			CallPool.Put(call)
 		}
 	}()
 	select {
 	case call := <-call.Done:
 		err := call.Error
-		callPool.Put(call)
-		mask = true
 		return err
 	case <-cancel:
 		return MaualError
-	case <-time.After(timeout):
+	case <-timer.C:
 		return TimeoutError
 	}
 }
@@ -192,12 +190,12 @@ func (c *Client) Sync(in RpcUnit) {
 	c.mtx.Unlock()
 	session := c.connector.Session()
 	if nil != session {
-		request := requestPool.Get()
+		request := RequestPool.Get()
 		request.Seq = seq
 		request.CmdId = in.CmdId()
 		body, err := in.Marshal()
 		if nil != err {
-			requestPool.Put(request)
+			RequestPool.Put(request)
 		} else {
 			request.Body = body
 			request.Oneway = true
@@ -207,7 +205,7 @@ func (c *Client) Sync(in RpcUnit) {
 }
 
 func (c *Client) igo(in RpcUnit, reply RpcUnit) *Call {
-	call := callPool.Get()
+	call := CallPool.Get()
 	call.In = in
 	call.Reply = reply
 	call.Done = make(chan *Call, 1)
@@ -225,13 +223,13 @@ func (c *Client) igo(in RpcUnit, reply RpcUnit) *Call {
 	if nil == session {
 		err = NoSesssionError
 	} else {
-		request := requestPool.Get()
+		request := RequestPool.Get()
 		request.Seq = seq
 		request.CmdId = in.CmdId()
 		// 必须要在发送协程序列化，保证非跨协程的write concurrence
 		body, err := in.Marshal()
 		if nil != err {
-			requestPool.Put(request)
+			RequestPool.Put(request)
 		} else {
 			request.Body = body
 			request.Oneway = false
@@ -260,13 +258,15 @@ func (c *Client) doneWithError(seq uint64) func(err error) {
 	}
 }
 
-func (c *Client) removeCall(seq uint64) {
+func (c *Client) removeCall(seq uint64) bool {
 	c.mtx.Lock()
-	if call, ok := c.pendings[seq]; ok {
+	call, ok := c.pendings[seq]
+	if ok {
 		delete(c.pendings, seq)
-		callPool.Put(call)
+		CallPool.Put(call)
 	}
 	c.mtx.Unlock()
+	return ok
 }
 
 type clientPipe struct {
@@ -321,7 +321,7 @@ func (c *Client) consumeResponse() {
 }
 
 func (p *Client) dealResponse(in *Response) {
-	defer responsePool.Put(in)
+	defer ResponsePool.Put(in)
 	seq := in.Seq
 	p.mtx.Lock()
 	call := p.pendings[seq]
@@ -469,7 +469,7 @@ func (s *Server) consumeRequest() {
 			return
 		case in := <-s.requestChan:
 			var (
-				response = responsePool.Get()
+				response = ResponsePool.Get()
 				err      error
 			)
 			err = func(request *Request) error {
@@ -508,8 +508,9 @@ func (s *Server) consumeRequest() {
 				}
 				in.S.Send(response)
 			} else {
-				responsePool.Put(response)
+				ResponsePool.Put(response)
 			}
+			RequestPool.Put(in.Body)
 		}
 	}
 }
