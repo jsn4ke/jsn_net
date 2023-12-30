@@ -67,13 +67,17 @@ func (c *TcpConnector) connect() {
 	for {
 		conn, err := net.Dial("tcp", c.addr)
 		if nil == err {
+			logger.Debug("[connector] addr %v start session", c.addr)
 			c.startSessoin(conn)
+		} else {
+			logger.Error("[connector] addr %v dial error %v", c.addr, err)
 		}
 		if c.tag.IsStopping() || 0 == c.reconnection {
 			break
 		}
 		time.Sleep(c.reconnection)
 	}
+	logger.Error("[connector] addr %v exit connect loop", c.addr)
 	c.tag.SetRunning(false)
 	c.tag.EndStopping()
 }
@@ -91,4 +95,5 @@ func (c *TcpConnector) startSessoin(conn net.Conn) {
 	c.mtx.Lock()
 	c.session = nil
 	c.mtx.Unlock()
+	logger.Debug("[connector] addr %v session close", c.addr)
 }
