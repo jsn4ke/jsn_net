@@ -91,8 +91,8 @@ func (s *TcpSession) run() {
 	}
 	s.tag.SetRunning(true)
 
-	s.safeGo("session pipe", s.pipe.Run)
-	s.safeGo("session wirte", s.write)
+	WaitGo(&s.goWg, s.pipe.Run)
+	WaitGo(&s.goWg, s.write)
 
 	s.pipe.Post(&TcpEventAdd{
 		S: s,
@@ -143,16 +143,6 @@ func (s *TcpSession) write() {
 		_ = s.conn.Close()
 	}
 	s.pipe.Close()
-}
-
-func (s *TcpSession) safeGo(name string, fn func()) {
-	s.goWg.Add(1)
-	go func() {
-		defer func() {
-			s.goWg.Done()
-		}()
-		fn()
-	}()
 }
 
 func (s *TcpSession) manualClose() {

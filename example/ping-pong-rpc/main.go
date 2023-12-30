@@ -98,7 +98,7 @@ func (p *pong) Unmarshal(in []byte) error {
 }
 
 func runServer() {
-	svr := jsn_rpc.NewServer(*addr, 128, 2)
+	svr := jsn_rpc.NewServer(*addr, 128, 4)
 	svr.RegisterExecutor(
 		new(ping),
 		func(request jsn_rpc.RpcUnit) (response jsn_rpc.RpcUnit, err error) {
@@ -116,7 +116,7 @@ func runServer() {
 }
 
 func runClient() {
-	cli := jsn_rpc.NewClient(*addr, 128, 2)
+	cli := jsn_rpc.NewClient(*addr, 128, 4)
 	// var lastLost int64
 	for {
 		count(mc_ping)
@@ -127,7 +127,7 @@ func runClient() {
 		// }()
 		err := cli.Call(&ping{
 			Data: "ping",
-		}, new(pong), nil, time.Millisecond*10)
+		}, new(pong), nil, time.Millisecond*50)
 		if nil != err {
 			count(mc_failure)
 			switch err {
@@ -170,7 +170,7 @@ func main() {
 		go metrics()
 	case "client":
 
-		go http.ListenAndServe("127.0.0.1:3434", nil)
+		go http.ListenAndServe("127.0.0.1:3435", nil)
 
 		*clientNum = jsn_net.Clip(*clientNum, 1, 30000)
 		for i := 0; i < *clientNum; i++ {
@@ -179,7 +179,7 @@ func main() {
 		go metrics()
 	default:
 		go http.ListenAndServe("127.0.0.1:3434", nil)
-		runServer()
+		go runServer()
 		*clientNum = jsn_net.Clip(*clientNum, 1, 30000)
 		for i := 0; i < *clientNum; i++ {
 			go runClient()

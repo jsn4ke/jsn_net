@@ -71,7 +71,7 @@ func (a *TcpAcceptor) Start() {
 	}
 	a.tag.SetRunning(true)
 	for i := 0; i < int(a.acceptNum); i++ {
-		a.safeGo("accept", a.accept)
+		WaitGo(&a.goWg, a.accept)
 	}
 	go func() {
 		a.goWg.Wait()
@@ -99,7 +99,7 @@ func (a *TcpAcceptor) accept() {
 			continue
 		}
 		atomic.AddInt32(&a.connSize, 1)
-		a.safeGo("run session", func() {
+		WaitGo(&a.goWg, func() {
 			a.runSession(conn)
 		})
 	}
@@ -115,14 +115,4 @@ func (a *TcpAcceptor) runSession(conn net.Conn) {
 	session.run()
 	atomic.AddInt32(&a.connSize, -1)
 	a.sessions.Delete(sid)
-}
-
-func (a *TcpAcceptor) safeGo(name string, fn func()) {
-	a.goWg.Add(1)
-	go func() {
-		defer func() {
-			a.goWg.Done()
-		}()
-		fn()
-	}()
 }

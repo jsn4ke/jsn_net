@@ -73,16 +73,16 @@ type Client struct {
 	responseDone chan struct{}
 	responseChan chan *Response
 
-	consumeWg sync.WaitGroup
-	tag       jsn_net.LifeTag
-	pipe      *clientPipe
+	goWg sync.WaitGroup
+	tag  jsn_net.LifeTag
+	pipe *clientPipe
 }
 
 func NewClient(addr string, responseChanSize int, consumeNum int32) *Client {
 	responseChanSize = jsn_net.Clip(responseChanSize, 1, 1024)
 	consumeNum = jsn_net.Clip(consumeNum, 1, 4)
 	c := new(Client)
-	c.consumeWg = sync.WaitGroup{}
+	c.goWg = sync.WaitGroup{}
 	c.pipe = new(clientPipe)
 	c.pipe.cli = c
 	c.tag = jsn_net.LifeTag{}
@@ -111,11 +111,11 @@ func (c *Client) start() {
 	c.connector.Start()
 
 	for i := 0; i < int(c.consumeNum); i++ {
-		go c.consumeResponse()
+		jsn_net.WaitGo(&c.goWg, c.consumeResponse)
 	}
 
 	go func() {
-		c.consumeWg.Wait()
+		c.goWg.Wait()
 		c.tag.SetRunning(false)
 		c.tag.EndStopping()
 	}()
@@ -303,10 +303,6 @@ func (c *Client) genSeq() uint64 {
 }
 
 func (c *Client) consumeResponse() {
-
-	c.consumeWg.Add(1)
-	defer c.consumeWg.Done()
-
 	for {
 		select {
 		case <-c.responseDone:
@@ -352,9 +348,9 @@ type Server struct {
 	// outside
 	executor map[uint32]*RpcCell
 
-	consumeWg sync.WaitGroup
-	tag       jsn_net.LifeTag
-	pipe      *serverPipe
+	goWg sync.WaitGroup
+	tag  jsn_net.LifeTag
+	pipe *serverPipe
 }
 
 func NewServer(addr string, requestChanSize int, consumeNum int32) *Server {
@@ -362,7 +358,7 @@ func NewServer(addr string, requestChanSize int, consumeNum int32) *Server {
 	consumeNum = jsn_net.Clip(consumeNum, 1, 4)
 
 	s := new(Server)
-	s.consumeWg = sync.WaitGroup{}
+	s.goWg = sync.WaitGroup{}
 	s.tag = jsn_net.LifeTag{}
 	s.pipe = new(serverPipe)
 	s.pipe.svr = s
@@ -404,13 +400,15 @@ func (s *Server) Start() {
 	s.acceptor.Start()
 
 	for i := 0; i < int(s.consumeNum); i++ {
-		go s.consumeRequest()
+		jsn_net.WaitGo(&s.goWg, s.consumeRequest)
 	}
+
 	go func() {
-		s.consumeWg.Wait()
+		s.goWg.Wait()
 		s.tag.SetRunning(false)
 		s.tag.EndStopping()
 	}()
+
 }
 
 func (s *Server) Close() {
@@ -457,9 +455,6 @@ func (*serverPipe) Run() {
 }
 
 func (s *Server) consumeRequest() {
-	s.consumeWg.Add(1)
-	defer s.consumeWg.Done()
-
 	for {
 		select {
 		case <-s.requestChanDone:
