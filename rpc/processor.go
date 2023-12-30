@@ -223,38 +223,35 @@ func (c *Client) igo(in RpcUnit, reply RpcUnit) *Call {
 	if nil == session {
 		err = NoSesssionError
 	} else {
-		request := RequestPool.Get()
-		request.Seq = seq
-		request.CmdId = in.CmdId()
 		// 必须要在发送协程序列化，保证非跨协程的write concurrence
 		body, err := in.Marshal()
-		if nil != err {
-			RequestPool.Put(request)
-		} else {
+		if nil == err {
+
+			request := RequestPool.Get()
+			request.Seq = seq
+			request.CmdId = in.CmdId()
 			request.Body = body
 			request.Oneway = false
-			request.DoneWithError = c.doneWithError(seq)
+			request.DoneWithError = c.doneWithError
 
 			session.Send(request)
 		}
 
 	}
 	if nil != err {
-		c.doneWithError(seq)(err)
+		c.doneWithError(seq, err)
 	}
 	return call
 }
 
-func (c *Client) doneWithError(seq uint64) func(err error) {
-	return func(err error) {
-		c.mtx.Lock()
-		call := c.pendings[seq]
-		delete(c.pendings, seq)
-		c.mtx.Unlock()
-		if nil != call {
-			call.Error = err
-			call.done()
-		}
+func (c *Client) doneWithError(seq uint64, err error) {
+	c.mtx.Lock()
+	call := c.pendings[seq]
+	delete(c.pendings, seq)
+	c.mtx.Unlock()
+	if nil != call {
+		call.Error = err
+		call.done()
 	}
 }
 

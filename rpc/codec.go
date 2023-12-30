@@ -162,7 +162,7 @@ func (*codec) writeRequest(w io.Writer, r *Request) {
 		return err
 	}()
 	if nil != err && nil != r.DoneWithError {
-		r.DoneWithError(err)
+		r.DoneWithError(r.Seq, err)
 	}
 }
 

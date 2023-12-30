@@ -29,7 +29,7 @@ type Request struct {
 	Body   []byte
 	Oneway bool
 
-	DoneWithError func(err error)
+	DoneWithError func(uint64, error)
 }
 
 func (r *Request) Release() {

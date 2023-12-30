@@ -117,17 +117,17 @@ func runServer() {
 
 func runClient() {
 	cli := jsn_rpc.NewClient(*addr, 128, 2)
-	var lastLost int64
+	// var lastLost int64
 	for {
 		count(mc_ping)
-		cancel := make(chan struct{})
-		go func() {
-			time.Sleep(time.Duration(time.Now().UnixNano()%10+100) * time.Millisecond)
-			close(cancel)
-		}()
+		// cancel := make(chan struct{})
+		// go func() {
+		// 	time.Sleep(time.Duration(time.Now().UnixNano()%10+10) * time.Millisecond)
+		// 	close(cancel)
+		// }()
 		err := cli.Call(&ping{
 			Data: "ping",
-		}, new(pong), cancel, time.Millisecond*200)
+		}, new(pong), nil, time.Millisecond*10)
 		if nil != err {
 			count(mc_failure)
 			switch err {
@@ -139,17 +139,17 @@ func runClient() {
 				count(mc_no_session)
 
 			}
-			switch err {
-			case jsn_rpc.NoSesssionError:
-				if 0 == lastLost {
-					lastLost = time.Now().Unix()
-				}
-				if 0 != lastLost && time.Now().Unix()-lastLost > int64(time.Second)*2 {
-					return
-				}
-			default:
-				lastLost = 0
-			}
+			// switch err {
+			// case jsn_rpc.NoSesssionError:
+			// 	if 0 == lastLost {
+			// 		lastLost = time.Now().Unix()
+			// 	}
+			// 	if 0 != lastLost && time.Now().Unix()-lastLost > int64(time.Second)*2 {
+			// 		return
+			// 	}
+			// default:
+			// 	lastLost = 0
+			// }
 		} else {
 			count(mc_success)
 
@@ -169,6 +169,9 @@ func main() {
 		runServer()
 		go metrics()
 	case "client":
+
+		go http.ListenAndServe("127.0.0.1:3434", nil)
+
 		*clientNum = jsn_net.Clip(*clientNum, 1, 30000)
 		for i := 0; i < *clientNum; i++ {
 			go runClient()
