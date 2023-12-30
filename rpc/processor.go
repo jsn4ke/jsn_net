@@ -141,9 +141,9 @@ func (c *Client) Close() {
 }
 
 var (
-	MaualError      = errors.New("manul cancel")
-	TimeoutError    = errors.New("timeout")
-	NoSesssionError = errors.New("no session")
+	MaualError      = errors.New("rpc manul cancel")
+	TimeoutError    = errors.New("rpc timeout")
+	NoSesssionError = errors.New("rpc no session")
 )
 
 func (c *Client) Call(in RpcUnit, reply RpcUnit, cancel <-chan struct{}, timeout time.Duration) error {
