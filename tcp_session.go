@@ -55,6 +55,10 @@ type TcpSession struct {
 	goWg sync.WaitGroup
 }
 
+func (s *TcpSession) Sid() uint64 {
+	return s.sid
+}
+
 func (s *TcpSession) Post(fn func()) bool {
 	if !s.tag.IsRunning() {
 		return false
