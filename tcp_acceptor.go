@@ -44,6 +44,15 @@ type TcpAcceptor struct {
 	goWg     sync.WaitGroup
 }
 
+func (a *TcpAcceptor) Session(sid uint64) *TcpSession {
+	value, ok := a.sessions.Load(sid)
+	if !ok {
+		return nil
+	}
+	sess, _ := value.(*TcpSession)
+	return sess
+}
+
 func (a *TcpAcceptor) Close() {
 	if !a.tag.IsRunning() {
 		return
