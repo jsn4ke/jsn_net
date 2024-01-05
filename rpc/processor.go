@@ -25,6 +25,11 @@ type (
 		Unit     RpcUnit
 		Executor RpcExecuctor
 	}
+	AsyncRpc struct {
+		In    RpcUnit
+		Reply RpcUnit
+		Error chan error
+	}
 )
 
 type Call struct {
@@ -58,6 +63,11 @@ func (c *Call) Release() {
 			return
 		}
 	}
+}
+
+func (c *AsyncRpc) Relase() {
+	c.In = nil
+	c.Reply = nil
 }
 
 type Client struct {

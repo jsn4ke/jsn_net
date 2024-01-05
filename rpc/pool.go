@@ -6,6 +6,7 @@ var (
 	RequestPool  *jsn_net.SyncPool[Request]
 	ResponsePool *jsn_net.SyncPool[Response]
 	CallPool     *jsn_net.SyncPool[Call]
+	AsyncRpcPool *jsn_net.SyncPool[AsyncRpc]
 )
 
 func init() {
@@ -19,6 +20,10 @@ func init() {
 	}
 	CallPool = new(jsn_net.SyncPool[Call])
 	if err := CallPool.Init(); nil != err {
+		panic(err)
+	}
+	AsyncRpcPool = new(jsn_net.SyncPool[AsyncRpc])
+	if err := AsyncRpcPool.Init(); nil != err {
 		panic(err)
 	}
 }
