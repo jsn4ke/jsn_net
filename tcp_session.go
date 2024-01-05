@@ -106,6 +106,19 @@ func (s *TcpSession) run() {
 	s.tag.SetRunning(false)
 }
 
+func (s *TcpSession) SetReadTimeoutOnce(timeout time.Duration) {
+	if 0 == timeout {
+		return
+	}
+	if err := s.conn.SetReadDeadline(time.Now().Add(timeout)); nil != err {
+		s.pipe.Post(&TcpEventClose{
+			S:           s,
+			Err:         err,
+			ManualClose: !s.tag.IsRunning(),
+		})
+	}
+}
+
 func (s *TcpSession) read() {
 	for {
 		if 0 != s.readTimeout {
