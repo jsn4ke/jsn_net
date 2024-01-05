@@ -132,6 +132,7 @@ func (s *TcpSession) read() {
 			Packet: packet,
 		})
 	}
+	s.tag.SetRunning(false)
 	s.sendChan <- nil
 }
 
