@@ -65,7 +65,7 @@ func (c *Call) Release() {
 	}
 }
 
-func (c *AsyncRpc) Relase() {
+func (c *AsyncRpc) Release() {
 	c.In = nil
 	c.Reply = nil
 }
