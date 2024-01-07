@@ -110,6 +110,10 @@ func NewClient(addr string, responseChanSize int, consumeNum int32) *Client {
 	return c
 }
 
+func (c *Client) Addr() string {
+	return c.connector.Addr()
+}
+
 func (c *Client) start() {
 
 	if c.tag.IsRunning() {

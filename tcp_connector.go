@@ -32,6 +32,10 @@ type TcpConnector struct {
 	tag LifeTag
 }
 
+func (c *TcpConnector) Addr() string {
+	return c.addr
+}
+
 func (c *TcpConnector) Session() *TcpSession {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
