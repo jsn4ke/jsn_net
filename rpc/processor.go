@@ -131,6 +131,10 @@ func (c *Client) start() {
 	}()
 }
 
+func (c *Client) Ready() bool {
+	return nil != c.connector.Session()
+}
+
 // Close implements jsn_net.Pipe.
 func (c *Client) Close() {
 	if !c.tag.IsRunning() {
